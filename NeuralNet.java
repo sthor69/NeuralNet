@@ -14,17 +14,23 @@ public class NeuralNet {
 
       // create the net
       net = new Neuron[size][];
-      for (int i = 0; i < size; i++)
+      for (int i = 0; i < size; i++) {
          net[i] = new Neuron[i + 2];
+         for (int t = 0; t < i + 2; t++)
+            net[i][t] = new Neuron(i, t);
+      }
+      
 
       // initialize last layer of the net
       for (int i = 0; i <= size; i++) {
+         
+         // initialize output of neuron 0 to 1 and all other neurons to input
          if (i > 0)
-
-            // initialize output of neuron 0 to 1 and all other neurons to inpu
-            net[size - 1][i].output = input[i];
+            net[size - 1][i].output = input[i - 1];
          else
             net[size - 1][i].output = 1;
+         
+         // initialize all synapsis
          for (int k = 1; k <= size - 1; k++) {
             syn = new Synapsis(net[size - 1][i], net[size - 2][k]);
             net[size - 1][i].next.add(syn);
@@ -70,6 +76,13 @@ public class NeuralNet {
       int layer;
       int index;
       
+      public Neuron(int _layer, int _index) {
+         index = _index;
+         layer = _layer;
+         next = new LinkedList<Synapsis>();
+         prev = new LinkedList<Synapsis>();
+      }
+      
       public String toString() {
          StringBuilder result = new StringBuilder();
          
@@ -96,13 +109,18 @@ public class NeuralNet {
       public String toString() {
          StringBuilder result = new StringBuilder();
          
-         result.append("[" + from.layer + "," + from.index);
+         result.append("[" + from.layer + "," + from.index + "]");
          result.append("-----");
          result.append(weight);
          result.append("-----> ");
-         result.append("[" + to.layer + "," + to.index);
+         result.append("[" + to.layer + "," + to.index + "]");
 
          return result.toString();
       }
+   }
+   
+   public static void main(String[] args) {
+      double[] input = {1d, 2d, 3d, 4d, 5d};
+      NeuralNet net = new NeuralNet(input);
    }
 }
