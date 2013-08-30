@@ -1,114 +1,114 @@
 package com.storassa.javapp;
 
-import java.util.LinkedList;
+import java.util.ArrayList;
 import java.util.Random;
 
 public class NeuralNet {
 
    private Neuron[][] net;
 
-   public NeuralNet(double[] input) {
+   public NeuralNet(int inputSize, int hiddenLayers, int[] hiddenLayerSize) {
 
-      int size = input.length;
-      Synapsis syn;
+      Synapse syn;
 
-      // create the net
-      net = new Neuron[size][];
-      for (int i = 0; i < size; i++) {
-         net[i] = new Neuron[i + 2];
-         for (int t = 0; t < i + 2; t++)
-            net[i][t] = new Neuron(i, t);
+      // create the L layer of the net
+      net = new Neuron[hiddenLayers + 2][];
+      net[hiddenLayers + 1] = new Neuron[inputSize + 1];
+      for (int i = 0; i <= inputSize; i++)
+         net[hiddenLayers + 1][i] = new Neuron(hiddenLayers + 1, i);
+
+      // create the 0 layer of the net
+      net[0] = new Neuron[1];
+      net[0][0] = new Neuron(0, 0);
+
+      // create the hidden layers
+      for (int i = 0; i < hiddenLayers; i++) {
+         net[i + 1] = new Neuron[hiddenLayerSize[i]];
+         net[i + 1][0] = new Neuron(i + 1, 0);
+         for (int t = 1; t < hiddenLayerSize[i]; t++)
+            net[i + 1][t] = new Neuron(i + 1, t);
+      }
+
+      // initialize the synapses of 0 layer of the net
+      for (int i = 0; i < hiddenLayerSize[0]; i++) {
+         syn = new Synapse(net[1][i], net[0][0]);
+         net[1][i].addToSynapsis(syn);
+         net[0][0].addFromSynapsis(syn);
       }
       
-
-      // initialize last layer of the net
-      for (int i = 0; i <= size; i++) {
-         
-         // initialize output of neuron 0 to 1 and all other neurons to input
-         if (i > 0)
-            net[size - 1][i].output = input[i - 1];
-         else
-            net[size - 1][i].output = 1;
-         
-         // initialize all synapsis
-         for (int k = 1; k <= size - 1; k++) {
-            syn = new Synapsis(net[size - 1][i], net[size - 2][k]);
-            net[size - 1][i].next.add(syn);
-            net[size - 2][k].prev.add(syn);
+      // initialize the synapses of L layer of the net
+      for (int i = 0; i <= inputSize; i++) {
+        for (int k = 1; k < hiddenLayerSize[hiddenLayers - 1]; k++) {
+            syn = new Synapse(net[hiddenLayers + 1][i], net[hiddenLayers][k]);
+            net[hiddenLayers + 1][i].addToSynapsis(syn);
+            net[hiddenLayers][k].addFromSynapsis(syn);
          }
       }
 
-      // create the rest of the net
-      for (int i = size - 2; i >= 0; i--) {
-
-         // initialize first neuron to 1
-         net[i][0].output = 1;
-         net[i][0].signal = 0;
-         net[i][0].prev = null;
-
-         // for layers higher than zero, updates synopsis
-         if (i > 0) {
-            for (int t = 1; t < i - 2; t++) {
-               syn = new Synapsis(net[i][0], net[i + 1][t]);
-               net[i][0].next.add(syn);
-               net[i + 1][t].prev.add(syn);
-            }
+      // initialize the synapses of last (near input) hidden layer of the net
+      for (int i = 0; i < hiddenLayerSize[hiddenLayers - 1]; i++)
+         for (int t = 1; t < hiddenLayerSize[hiddenLayers - 2]; t++) {
+            syn = new Synapse(net[hiddenLayers][i], net[hiddenLayers - 1][t]);
+            net[hiddenLayers][i].addToSynapsis(syn);
+            net[hiddenLayers - 1][t].addFromSynapsis(syn);
          }
-
-         // initialize all the other neurons
-         for (int t = 1; t < i; t++) {
-            for (int k = 1; k < i; k++) {
-               syn = new Synapsis(net[i][t], net[i - 1][k]);
-               net[i - 1][k].prev.add(syn);
-               net[i][t].next.add(syn);
-            }
-         }
-      }
-
+            
       System.out.println();
    }
 
    private class Neuron {
       double signal;
       double output;
-      LinkedList<Synapsis> next;
-      LinkedList<Synapsis> prev;
+      ArrayList<Synapse> next;
+      ArrayList<Synapse> prev;
       int layer;
       int index;
-      
+
       public Neuron(int _layer, int _index) {
          index = _index;
          layer = _layer;
-         next = new LinkedList<Synapsis>();
-         prev = new LinkedList<Synapsis>();
+         next = new ArrayList<Synapse>();
+         prev = new ArrayList<Synapse>();
       }
-      
+
+      public void addFromSynapsis(Synapse syn) {
+         prev.add(syn);
+         signal += syn.out;
+         output = Math.tanh(signal);
+      }
+
+      public void addToSynapsis(Synapse syn) {
+         next.add(syn);
+      }
+
       public String toString() {
          StringBuilder result = new StringBuilder();
-         
+
          result.append("Layer: " + layer + ", index: " + index);
          result.append("\nSignal = " + signal);
          result.append("\nOutput = " + output);
-         
+
          return result.toString();
       }
    }
 
-   private class Synapsis {
+   private class Synapse {
       final Neuron from;
       final Neuron to;
       double weight;
+      double out;
 
-      public Synapsis(Neuron _from, Neuron _to) {
+      public Synapse(Neuron _from, Neuron _to) {
          Random r = new Random();
          from = _from;
          to = _to;
          weight = r.nextDouble();
+         out = from.output * weight;
       }
-      
+
       public String toString() {
          StringBuilder result = new StringBuilder();
-         
+
          result.append("[" + from.layer + "," + from.index + "]");
          result.append("-----");
          result.append(weight);
@@ -118,9 +118,9 @@ public class NeuralNet {
          return result.toString();
       }
    }
-   
+
    public static void main(String[] args) {
-      double[] input = {1d, 2d, 3d, 4d, 5d};
-      NeuralNet net = new NeuralNet(input);
+      int[] layerSize = { 3, 3 };
+      NeuralNet net = new NeuralNet(5, 2, layerSize);
    }
 }
